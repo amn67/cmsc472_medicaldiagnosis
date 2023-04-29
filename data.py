@@ -36,12 +36,13 @@ def load_lung_data(data_dir):
     
     return X, y
 
-def load_brain_data(data_dir):
+def load_brain_data(data_dir,mask_dir):
     files_list = os.listdir(data_dir)
+    mask_files_list=os.listdir(mask_dir)
     images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list]
     X = images
     
-    labels = [get_brain_label(data_dir+image_path) for image_path in files_list]
+    labels = [get_brain_label(data_dir+image_path) for image_path in mask_files_list]
     y = torch.tensor(labels)
     
     return X, y
@@ -54,3 +55,5 @@ def get_brain_label(image_path):
     return 0
 
 # lung_data = BodyPartDataset('lung', load_lung_data, 'data/lung/')
+
+
