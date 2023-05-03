@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import cv2
 import os
+import collections
 
 class BodyPartDataset(Dataset):
     def __init__(self, part, load_function, data_path):
@@ -36,23 +37,42 @@ def load_lung_data(data_dir):
     
     return X, y
 
-def load_brain_data(data_dir,mask_dir):
+def load_brain_data(data_dir):
     files_list = os.listdir(data_dir)
-    mask_files_list=os.listdir(mask_dir)
-    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list]
-    X = images
+    images = []
+    labels = []
+
+    for image_path in files_list:
+       
+       if image_path != '.DS_Store':
+        
+        trimmed_path = image_path[:-4]
+        
+        read_image = cv2.imread(data_dir+image_path)
+        if 'mask' not in image_path:
+            images.append(torch.from_numpy(read_image))
+            
+            masked = trimmed_path + '_mask.tif'
+            masked_read = cv2.imread(data_dir+masked)
+            if 255 in masked_read:
+                labels.append(1)
+            else:
+                labels.append(0)
     
-    labels = [get_brain_label(data_dir+image_path) for image_path in mask_files_list]
+    X = torch.stack(images)
     y = torch.tensor(labels)
     
     return X, y
 
-def get_brain_label(image_path):
-  value = np.max(cv2.imread(image_path))
-  if value > 0:
-    return 1
-  else:
-    return 0
+def load_breast_data(data_dir):
+    files_list = os.listdir(data_dir)
+    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path != '.DS_Store']
+    X = torch.stack(images)
+
+    labels = [int(image_path[-5]) for image_path in files_list if image_path != '.DS_Store']
+    y = torch.tensor(labels)
+    
+    return X, y
 
 # lung_data = BodyPartDataset('lung', load_lung_data, 'data/lung/')
 
