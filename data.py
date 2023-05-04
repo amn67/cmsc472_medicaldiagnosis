@@ -24,7 +24,44 @@ class BodyPartDataset(Dataset):
     def __getitem__(self, idx):
         return self.images[idx], self.labels[idx]
 
-    
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+
+class MultiPartDataset(Dataset):
+    def __init__(self, part_datasets, size=256):
+        self.part_datasets = part_datasets
+        parts = [part_dataset.part for part_dataset in part_datasets]
+        self.parts_idx = {part: idx for idx, part in enumerate(parts)}
+
+        self.transform = transforms.Compose([
+            transforms.Lambda(lambda x: x.unsqueeze(0)),  # Add channel dimension
+            transforms.Resize((size, size)),
+        ])
+
+        images = []
+        labels = []
+        for dataset in part_datasets:
+            for i in range(len(dataset)):
+                image, part = dataset[i]
+                image = self.transform(image)
+                label = self.parts_idx[dataset.part]
+                images.append(image)
+                labels.append(label)
+
+        self.images = torch.stack(images)
+        self.labels = torch.tensor(labels, dtype=torch.long)
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        return self.images[idx], self.labels[idx]
+
+def rgb_to_grayscale(tensor):
+    weights = torch.tensor([0.2989, 0.5870, 0.1140]).view(1, 3, 1, 1).to(tensor.device)
+    grayscale_tensor = (tensor * weights).sum(dim=1, keepdim=True)
+    return grayscale_tensor
 
 
 def load_lung_data(data_dir):
@@ -60,6 +97,13 @@ def load_brain_data(data_dir):
                 labels.append(0)
     
     X = torch.stack(images)
+
+
+    X = X.permute(0, 3, 1, 2)
+
+    X = rgb_to_grayscale(X)
+
+    X = X.squeeze(1)
     y = torch.tensor(labels)
     
     return X, y
@@ -72,8 +116,14 @@ def load_breast_data(data_dir):
     labels = [int(image_path[-5]) for image_path in files_list if image_path != '.DS_Store']
     y = torch.tensor(labels)
     
+    X = X.permute(0, 3, 1, 2)
+
+    X = rgb_to_grayscale(X)
+
+    X = X.squeeze(1)
+
+
+
     return X, y
 
 # lung_data = BodyPartDataset('lung', load_lung_data, 'data/lung/')
-
-
