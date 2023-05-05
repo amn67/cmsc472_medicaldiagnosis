@@ -24,7 +24,8 @@ class BodyPartDataset(Dataset):
         # Resize to 256x256
         self.images = self.images.unsqueeze(1) 
         self.images = F.interpolate(self.images, size=(IMG_SIZE, IMG_SIZE), mode='bilinear', align_corners=False)
-        self.images = self.images.squeeze(1)  
+        self.images = self.images.squeeze(1)
+        self.images = self.images.to(torch.float32)  # Force float32
 
 
 
