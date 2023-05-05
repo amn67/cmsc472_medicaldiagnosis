@@ -5,10 +5,13 @@ import torch
 # from torch import optim
 # import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
 from PIL import Image
 import cv2
 import os
 import collections
+
+IMG_SIZE = 256
 
 class BodyPartDataset(Dataset):
     def __init__(self, part, load_function, data_path):
@@ -17,6 +20,13 @@ class BodyPartDataset(Dataset):
         self.data_path = data_path
 
         self.images, self.labels = load_function(data_path)
+
+        # Resize to 256x256
+        self.images = self.images.unsqueeze(1) 
+        self.images = F.interpolate(self.images, size=(IMG_SIZE, IMG_SIZE), mode='bilinear', align_corners=False)
+        self.images = self.images.squeeze(1)  
+
+
 
     def __len__(self):
         return len(self.labels)
@@ -29,23 +39,25 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 class MultiPartDataset(Dataset):
-    def __init__(self, part_datasets, size=256):
+    def __init__(self, part_datasets, parts_list=None):
         self.part_datasets = part_datasets
-        parts = [part_dataset.part for part_dataset in part_datasets]
-        self.parts_idx = {part: idx for idx, part in enumerate(parts)}
 
-        self.transform = transforms.Compose([
-            transforms.Lambda(lambda x: x.unsqueeze(0)),  # Add channel dimension
-            transforms.Resize((size, size)),
-        ])
+        # If we pass in dataset Subset, we need to pass in a parts_list to know
+        # which body part each dataset object corresponds to
+        if parts_list is None:
+            self.parts = [part_dataset.part for part_dataset in part_datasets]
+        else:
+            self.parts = parts_list
+        # One hot encode our body part classes
+        self.parts_idx = {part: idx for idx, part in enumerate(self.parts)}
+
 
         images = []
         labels = []
-        for dataset in part_datasets:
+        for idx, dataset in enumerate(part_datasets):
             for i in range(len(dataset)):
                 image, part = dataset[i]
-                image = self.transform(image)
-                label = self.parts_idx[dataset.part]
+                label = self.parts_idx[self.parts[idx]]
                 images.append(image)
                 labels.append(label)
 
@@ -67,7 +79,25 @@ def rgb_to_grayscale(tensor):
 def load_lung_data(data_dir):
     files_list = os.listdir(data_dir)
     images = [torch.tensor(dicom.dcmread(data_dir+image_path).pixel_array.astype('int16')) for image_path in files_list]
-    X = torch.stack(images)
+    
+    window_level = 40 
+    window_width = 400 
+
+    lower_limit = window_level - window_width // 2
+    upper_limit = window_level + window_width // 2
+
+    images_scaled = []
+
+    for image in images:
+        pixel_data = image
+
+        windowed_data = torch.clamp(pixel_data, lower_limit, upper_limit)
+
+        normalized_data = (windowed_data - lower_limit) * (255.0 / window_width)
+        grayscale_data = normalized_data.to(torch.uint8)
+        images_scaled.append(grayscale_data)
+    
+    X = torch.stack(images_scaled)
     
     labels = 50*[1] + 50*[0]
     y = torch.tensor(labels)
@@ -126,4 +156,30 @@ def load_breast_data(data_dir):
 
     return X, y
 
-# lung_data = BodyPartDataset('lung', load_lung_data, 'data/lung/')
+def load_datasets():
+    # Returns a dictionary of datasets, where each dataset is a dictionary of train, val, test
+
+
+    lung_dataset = BodyPartDataset('lung', load_lung_data, 'data/lung/')
+    breast_dataset = BodyPartDataset('breast', load_breast_data, 'data/breast/')
+    brain_dataset = BodyPartDataset('brain', load_brain_data, 'data/brain/')
+
+    datasets = [lung_dataset, breast_dataset, brain_dataset]
+    generator = torch.Generator().manual_seed(42)
+    all_data = {}
+    parts_list = []
+    for dataset in datasets:
+        part = dataset.part
+        parts_list.append(part)
+        all_data[part] = {}
+        train_set, val_set, test_set = torch.utils.data.random_split(dataset, [0.7, 0.2, 0.1], generator=generator)
+        all_data[part]['train'] = train_set
+        all_data[part]['val'] = val_set
+        all_data[part]['test'] = test_set
+
+    all_data['combined'] = {}
+    all_data['combined']['train'] = MultiPartDataset([all_data[part]['train'] for part in parts_list], parts_list)
+    all_data['combined']['val'] = MultiPartDataset([all_data[part]['val'] for part in parts_list], parts_list)
+    all_data['combined']['test'] = MultiPartDataset([all_data[part]['test'] for part in parts_list], parts_list)
+
+    return all_data
