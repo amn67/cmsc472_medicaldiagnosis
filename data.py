@@ -64,6 +64,8 @@ class MultiPartDataset(Dataset):
 
         self.images = torch.stack(images)
         self.labels = torch.tensor(labels, dtype=torch.long)
+        self.labels = F.one_hot(self.labels, num_classes=3)
+
 
     def __len__(self):
         return len(self.labels)
@@ -81,8 +83,8 @@ def load_lung_data(data_dir):
     files_list = os.listdir(data_dir)
     images = [torch.tensor(dicom.dcmread(data_dir+image_path).pixel_array.astype('int16')) for image_path in files_list]
     
-    window_level = 40 
-    window_width = 400 
+    window_level = -600
+    window_width = 2250
 
     lower_limit = window_level - window_width // 2
     upper_limit = window_level + window_width // 2
