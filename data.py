@@ -146,8 +146,9 @@ def load_brain_data(data_dir):
 
 def load_breast_data(data_dir):
     files_list = os.listdir(data_dir)
-    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path != '.DS_Store']
-    X = torch.stack(images)
+    images = [cv2.imread(data_dir+image_path) for image_path in files_list if image_path != '.DS_Store']
+    resized = [torch.from_numpy(cv2.resize(image, (50,50), interpolation= cv2.INTER_LINEAR))for image in images]
+    X = torch.stack(resized)
 
     labels = [int(image_path[-5]) for image_path in files_list if image_path != '.DS_Store']
     y = torch.tensor(labels)
