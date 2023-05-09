@@ -55,16 +55,19 @@ class MultiPartDataset(Dataset):
 
         images = []
         labels = []
+        binary_labels = []
         for idx, dataset in enumerate(part_datasets):
             for i in range(len(dataset)):
-                image, part = dataset[i]
+                image, bin_label = dataset[i]
                 label = self.parts_idx[self.parts[idx]]
                 images.append(image)
                 labels.append(label)
+                binary_labels.append(bin_label)
 
         self.images = torch.stack(images)
         self.labels = torch.tensor(labels, dtype=torch.long)
         self.labels = F.one_hot(self.labels, num_classes=3)
+        self.binary_labels = torch.tensor(binary_labels, dtype=torch.long)
 
 
     def __len__(self):
@@ -114,7 +117,7 @@ def load_brain_data(data_dir):
 
     for image_path in files_list:
        
-       if image_path[0] == 'T':
+       if image_path != '.DS_Store':
         
         trimmed_path = image_path[:-4]
         
@@ -143,14 +146,10 @@ def load_brain_data(data_dir):
 
 def load_breast_data(data_dir):
     files_list = os.listdir(data_dir)
-    for f in files_list:
-        # print(f)
-        pass
-    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path[0] == '1']
-
+    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path != '.DS_Store']
     X = torch.stack(images)
 
-    labels = [int(image_path[-5]) for image_path in files_list if image_path[0] == '1']
+    labels = [int(image_path[-5]) for image_path in files_list if image_path != '.DS_Store']
     y = torch.tensor(labels)
     
     X = X.permute(0, 3, 1, 2)
