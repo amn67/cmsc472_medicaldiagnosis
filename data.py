@@ -114,7 +114,7 @@ def load_brain_data(data_dir):
 
     for image_path in files_list:
        
-       if image_path != '.DS_Store':
+       if image_path[0] == 'T':
         
         trimmed_path = image_path[:-4]
         
@@ -143,10 +143,14 @@ def load_brain_data(data_dir):
 
 def load_breast_data(data_dir):
     files_list = os.listdir(data_dir)
-    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path != '.DS_Store']
+    for f in files_list:
+        # print(f)
+        pass
+    images = [torch.from_numpy(cv2.imread(data_dir+image_path)) for image_path in files_list if image_path[0] == '1']
+
     X = torch.stack(images)
 
-    labels = [int(image_path[-5]) for image_path in files_list if image_path != '.DS_Store']
+    labels = [int(image_path[-5]) for image_path in files_list if image_path[0] == '1']
     y = torch.tensor(labels)
     
     X = X.permute(0, 3, 1, 2)
