@@ -83,7 +83,7 @@ def rgb_to_grayscale(tensor):
 
 
 def load_lung_data(data_dir):
-    files_list = os.listdir(data_dir)
+    files_list = sorted(os.listdir(data_dir))
     images = [torch.tensor(dicom.dcmread(data_dir+image_path).pixel_array.astype('int16')) for image_path in files_list]
     
 
