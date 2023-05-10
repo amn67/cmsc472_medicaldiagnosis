@@ -87,7 +87,7 @@ def load_lung_data(data_dir):
     images = [torch.tensor(dicom.dcmread(data_dir+image_path).pixel_array.astype('int16')) for image_path in files_list]
     
     window_level = -600
-    window_width = 2250
+    window_width = 1500
 
     lower_limit = window_level - window_width // 2
     upper_limit = window_level + window_width // 2
