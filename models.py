@@ -26,23 +26,23 @@ class LungBinaryClassifierCNN(nn.Module):
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.batchnorm1 = nn.BatchNorm2d(num_features=16)
-        self.dropout1 = nn.Dropout(0.3)
+        self.dropout1 = nn.Dropout(0.1)
 
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.batchnorm2 = nn.BatchNorm2d(num_features=32)
-        self.dropout2 = nn.Dropout(0.3)
+        self.dropout2 = nn.Dropout(0.1)
 
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.relu3 = nn.ReLU()
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.batchnorm3 = nn.BatchNorm2d(num_features=64)
-        self.dropout3 = nn.Dropout(0.3)
+        self.dropout3 = nn.Dropout(0.1)
 
         self.fc1 = nn.Linear(64 * 32 * 32, 128)
         self.relu4 = nn.ReLU()
-        self.dropout4=nn.Dropout(0.3)
+        self.dropout4=nn.Dropout(0.1)
         self.fc2 = nn.Linear(128, 1)
         self.sigmoid = nn.Sigmoid()
 

@@ -86,24 +86,45 @@ def load_lung_data(data_dir):
     files_list = os.listdir(data_dir)
     images = [torch.tensor(dicom.dcmread(data_dir+image_path).pixel_array.astype('int16')) for image_path in files_list]
     
-    window_level = -600
-    window_width = 1500
 
-    lower_limit = window_level - window_width // 2
-    upper_limit = window_level + window_width // 2
+
+    images_scaled = []
+
+    window_level_lung = 500
+    window_width_lung = 1500
+
+    window_level_mediastinal = 40
+    window_width_mediastinal = 350
 
     images_scaled = []
 
     for image in images:
-        pixel_data = image
+        pixel_data = image.clone()
 
-        windowed_data = torch.clamp(pixel_data, lower_limit, upper_limit)
+        # Apply lung window settings
+        lower_limit_lung = window_level_lung - window_width_lung // 2
+        upper_limit_lung = window_level_lung + window_width_lung // 2
+        windowed_data_lung = torch.clamp(pixel_data, lower_limit_lung, upper_limit_lung)
+        normalized_data_lung = (windowed_data_lung - lower_limit_lung) * (255.0 / window_width_lung)
 
-        normalized_data = (windowed_data - lower_limit) * (255.0 / window_width)
-        grayscale_data = normalized_data.to(torch.uint8)
+        # Apply mediastinal window settings
+        lower_limit_mediastinal = window_level_mediastinal - window_width_mediastinal // 2
+        upper_limit_mediastinal = window_level_mediastinal + window_width_mediastinal // 2
+        windowed_data_mediastinal = torch.clamp(pixel_data, lower_limit_mediastinal, upper_limit_mediastinal)
+        normalized_data_mediastinal = (windowed_data_mediastinal - lower_limit_mediastinal) * (255.0 / window_width_mediastinal)
+
+        # Combine the two images
+        combined_data = torch.where(
+            torch.abs(normalized_data_lung - 127.5)  > torch.abs(normalized_data_mediastinal - 127.5),
+            normalized_data_lung,
+            normalized_data_mediastinal
+        )
+
+        grayscale_data = combined_data.to(torch.uint8)
         images_scaled.append(grayscale_data)
-    
+
     X = torch.stack(images_scaled)
+
     
     labels = 50*[1] + 50*[0]
     y = torch.tensor(labels)
